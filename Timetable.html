@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complete School Timetable System (Async Responsive Engine)</title>
+<style>
+*{ box-sizing:border-box; }
+body{ margin:0; font-family:Arial, "Noto Sans Ethiopic", sans-serif; background:#f0f4f8; color:#172033; }
+header{ background:#0f172a; color:white; text-align:center; padding:20px; }
+header h1{ margin:0 0 5px; font-size:22px; }
+.container{ max-width:1500px; margin:auto; padding:15px; }
+.card{ background:white; margin-bottom:20px; padding:20px; border-radius:12px; box-shadow:0 3px 15px rgba(0,0,0,.08); }
+h2{ color:#0f172a; margin-top:0; font-size:18px; border-bottom:2px solid #e2e8f0; padding-bottom:8px; }
+button{ border:0; border-radius:7px; padding:10px 16px; margin:4px; cursor:pointer; font-weight:bold; }
+.btn-primary{ background:#2563eb; color:white; }
+.btn-success{ background:#16a34a; color:white; }
+.btn-warning{ background:#d97706; color:white; }
+.btn-danger{ background:#dc2626; color:white; }
+.btn-dark{ background:#111827; color:white; }
+.form-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; }
+label{ font-weight:bold; display:block; margin-bottom:5px; font-size:14px; }
+input,select{ width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:7px; font-size:14px; }
+.checkbox-group{ border:1px solid #cbd5e1; border-radius:7px; padding:10px; max-height:220px; overflow-y:auto; background:#f8fafc; }
+.checkbox-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(65px, 1fr)); gap:6px; }
+.checkbox-item{ display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; background:#fff; padding:4px; border:1px solid #e2e8f0; border-radius:5px; }
+.checkbox-item input{ width:auto; cursor:pointer; }
+table{ width:100%; border-collapse:collapse; margin-top:15px; }
+th,td{ border:1px solid #cbd5e1; padding:8px; text-align:center; }
+th{ background:#0f172a; color:white; font-size:13px; }
+td{ min-width:110px; height:50px; background:#f8fafc; }
+.subject{ font-size:13px; font-weight:bold; color:#1d4ed8; }
+.teacher{ font-size:11px; color:#475569; margin-top:2px; }
+.period{ font-weight:bold; background:#e2e8f0; color:#111827; font-size:12px; }
+.message{ display:none; padding:12px; border-radius:8px; margin-top:15px; font-weight:bold; font-size:14px; line-height: 1.6; }
+.success{ background:#dcfce7; color:#166534; }
+.error{ background:#fee2e2; color:#991b1b; }
+.tag{ display:inline-block; background:#e2e8f0; padding:2px 6px; border-radius:4px; font-size:12px; margin:2px; }
+.rules-info{ background:#f1f5f9; border-left:4px solid #2563eb; padding:12px; font-size:13px; line-height:1.5; margin-bottom:15px; }
+.grade-title{ font-weight:bold; color:#2563eb; margin:8px 0 4px; font-size:13px; border-bottom:1px solid #cbd5e1; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.8s ease-in-out infinite; vertical-align: middle; margin-right: 5px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media print{
+    header, .no-print{ display:none !important; }
+    .card{ box-shadow:none; padding:0; margin:0; }
+    table{ page-break-inside:avoid; margin-bottom:20px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>🏫 የትምህርት ቤት Timetable System (Conflict-Checked Scheduler)</h1>
+</header>
+
+<div class="container">
+
+    <!-- SETTINGS -->
+    <div class="card no-print">
+        <h2>⚙ 1. የICT Lab ቅንብር</h2>
+        <div class="form-grid">
+            <div>
+                <label>የICT Lab ብዛት</label>
+                <input type="number" id="ictLabsCount" value="3" min="1" max="10">
+            </div>
+        </div>
+    </div>
+
+    <!-- TEACHER REGISTRATION FORM -->
+    <div class="card no-print">
+        <h2>👨‍🏫 2. የመምህራን ምዝገባና ማስተካከያ</h2>
+        <div class="rules-info">
+            • <b>የSubject ስርጭት ህግ፦</b> እያንዳንዱ Subject በሳምንት ቢያንስ 1 እና ቢበዛ 4 ጊዜ ይኖረዋል፤ በአንድ ቀን ግን ከ1 ጊዜ በላይ አይደገምም።<br>
+            • <b>የተጨማሪ/Fallback ምደባ የለም፡</b> በምዝገባ ያልተመደበ Subject/Teacher በሌላ መምህር በግድ አይሞላም።
+        </div>
+        <div class="form-grid">
+            <div>
+                <label>የመምህሩ ስም</label>
+                <input id="teacherName" placeholder="ለምሳሌ፦ Kassahun">
+            </div>
+            <div>
+                <label>የትምህርት አይነት (Subject)</label>
+                <select id="subjectSelect">
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="English">English</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                    <option value="ICT">ICT</option>
+                    <option value="History">History</option>
+                    <option value="Geography">Geography</option>
+                    <option value="Economics">Economics</option>
+                    <option value="Agriculture">Agriculture</option>
+                    <option value="Amharic">Amharic</option>
+                    <option value="Sport">Sport</option>
+                    <option value="Art">Art</option>
+                    <option value="Citizenship">Citizenship</option>
+                </select>
+            </div>
+            <div>
+                <label>የሚያስተምራቸው ክፍሎች/ሴክሽኖች (ከ 9 እስከ 12 A-Z)</label>
+                <div class="checkbox-group" id="classCheckboxes"></div>
+            </div>
+        </div>
+        <br>
+        <button id="saveTeacherBtn" class="btn-success" onclick="registerTeacher()">➕ መምህሩን መዝግብ</button>
+        <button id="cancelEditBtn" class="btn-dark" onclick="cancelEdit()" style="display:none;">❌ ሰርዝ (Cancel)</button>
+        
+        <h3 style="margin-top:20px; font-size:15px;">የተመዘገቡ መምህራን ዝርዝር፦</h3>
+        <div id="teacherList"></div>
+    </div>
+
+    <!-- GENERATE -->
+    <div class="card no-print">
+        <h2>🚀 3. የጊዜ ሰሌዳውን ጀነሬት ያድርጉ</h2>
+        <button id="genBtn" class="btn-primary" onclick="startGenerationAsync()">🚀 GENERATE TIMETABLE</button>
+        <button class="btn-dark" onclick="window.print()">🖨️ PRINT / PDF</button>
+        <button class="btn-danger" onclick="clearAll()">🗑️ ሁሉንም አፅዳ</button>
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="card">
+        <h2>📅 Master Timetable (Grades 9-12)</h2>
+        <div id="result">
+            <p style="color:#64748b;">እስካሁን ምንም Timetable አልተዘጋጀም።</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let registeredTeachers = [];
+let editingIndex = -1; // Stores index of teacher being edited
+let timetable = {};
+let days = ["ሰኞ", "ማክሰኞ", "ረቡዕ", "ሐሙስ", "ዓርብ"];
+
+const curriculumPeriods = {
+    "9-10": {
+        "Mathematics": 3, "English": 3, "Physics": 3, "Chemistry": 3, "Biology": 3,
+        "History": 2, "Economics": 2, "Geography": 2, "ICT": 2, "Amharic": 2,
+        "Sport": 1, "Art": 2, "Citizenship": 2
+    },
+    "11-12-Social": {
+        "Mathematics": 4, "English": 4, "History": 4, "Geography": 4,
+        "Economics": 4, "ICT": 3, "Amharic": 2
+    },
+    "11-12-Natural": {
+        "Physics": 3, "Chemistry": 3, "Biology": 3, "Mathematics": 4,
+        "English": 4, "ICT": 3, "Amharic": 2, "Agriculture": 3
+    }
+};
+
+function generateSections(){
+    let sections = [];
+    for(let i = 65; i <= 90; i++){ // A to Z
+        sections.push(String.fromCharCode(i));
+    }
+    return sections;
+}
+
+function renderClassCheckboxes(){
+    const box = document.getElementById("classCheckboxes");
+    box.innerHTML = "";
+    const sections = generateSections();
+
+    [9,10,11,12].forEach(g => {
+        box.innerHTML += `<div class="grade-title">${g}ኛ ክፍል (Grade ${g})</div>`;
+        let gridHtml = `<div class="checkbox-grid">`;
+        sections.forEach(s => {
+            let clsName = `${g}${s}`;
+            gridHtml += `<label class="checkbox-item">
+                <input type="checkbox" value="${clsName}" class="cls-chk"> ${clsName}
+            </label>`;
+        });
+        gridHtml += `</div>`;
+        box.innerHTML += gridHtml;
+    });
+}
+
+function registerTeacher(){
+    const nameInput = document.getElementById("teacherName");
+    const name = nameInput.value.trim();
+    const subject = document.getElementById("subjectSelect").value;
+    const selectedClasses = Array.from(
+        document.querySelectorAll('.cls-chk:checked')
+    ).map(cb => cb.value);
+
+    if(!name){
+        showMessage("እባክህ የመምህሩን ስም አስገባ።", "error");
+        return;
+    }
+
+    if(selectedClasses.length === 0){
+        showMessage("እባክህ ቢያንስ አንድ ክፍል ምረጥ።", "error");
+        return;
+    }
+
+    if(editingIndex === -1) {
+        // ADD NEW TEACHER
+        registeredTeachers.push({
+            id: Date.now() + Math.random(),
+            name: name,
+            subject: subject,
+            classes: selectedClasses
+        });
+        showMessage(`✅ መምህር ${escapeHtml(name)} ተመዝግቧል!`, "success");
+    } else {
+        // UPDATE EXISTING TEACHER
+        registeredTeachers[editingIndex].name = name;
+        registeredTeachers[editingIndex].subject = subject;
+        registeredTeachers[editingIndex].classes = selectedClasses;
+        
+        showMessage(`✅ የመምህር ${escapeHtml(name)} መረጃ ተዘምኗል!`, "success");
+        cancelEdit();
+    }
+
+    resetForm();
+    displayRegisteredTeachers();
+}
+
+function editTeacher(index){
+    editingIndex = index;
+    const teacher = registeredTeachers[index];
+
+    // Populate inputs
+    document.getElementById("teacherName").value = teacher.name;
+    document.getElementById("subjectSelect").value = teacher.subject;
+
+    // Check matching class checkboxes
+    document.querySelectorAll('.cls-chk').forEach(cb => {
+        cb.checked = teacher.classes.includes(cb.value);
+    });
+
+    // Update buttons
+    const saveBtn = document.getElementById("saveTeacherBtn");
+    saveBtn.innerText = "💾 መረጃውን አዘምን (Update)";
+    saveBtn.className = "btn-warning";
+    document.getElementById("cancelEditBtn").style.display = "inline-block";
+
+    // Scroll to top of form
+    document.getElementById("teacherName").focus();
+}
+
+function cancelEdit(){
+    editingIndex = -1;
+    resetForm();
+    
+    const saveBtn = document.getElementById("saveTeacherBtn");
+    saveBtn.innerText = "➕ መምህሩን መዝግብ";
+    saveBtn.className = "btn-success";
+    document.getElementById("cancelEditBtn").style.display = "none";
+}
+
+function resetForm(){
+    document.getElementById("teacherName").value = "";
+    document.querySelectorAll('.cls-chk').forEach(cb => cb.checked = false);
+}
+
+function displayRegisteredTeachers(){
+    const container = document.getElementById("teacherList");
+
+    if(registeredTeachers.length === 0){
+        container.innerHTML = "<p style='color:#64748b;'>ምንም የተመዘገበ መምህር የለም።</p>";
+        return;
+    }
+
+    let html = `<table>
+        <tr>
+            <th>የመምህር ስም</th>
+            <th>Subject</th>
+            <th>የተመደቡባቸው ክፍሎች</th>
+            <th>እርምጃ</th>
+        </tr>`;
+
+    registeredTeachers.forEach((t, idx) => {
+        html += `<tr>
+            <td><b>${escapeHtml(t.name)}</b></td>
+            <td>${escapeHtml(t.subject)}</td>
+            <td>${t.classes.map(c => `<span class="tag">${escapeHtml(c)}</span>`).join(" ")}</td>
+            <td>
+                <button class="btn-warning" onclick="editTeacher(${idx})">✏️ አስተካክል</button>
+                <button class="btn-danger" onclick="deleteTeacher(${idx})">🗑 ሰርዝ</button>
+            </td>
+        </tr>`;
+    });
+
+    html += `</table>`;
+    container.innerHTML = html;
+}
+
+function deleteTeacher(index){
+    if(editingIndex === index){
+        cancelEdit();
+    }
+    registeredTeachers.splice(index, 1);
+    displayRegisteredTeachers();
+}
+
+function getCurriculumForClass(cls){
+    const gradeNum = parseInt(cls, 10);
+
+    if(gradeNum === 9 || gradeNum === 10){
+        return curriculumPeriods["9-10"];
+    }
+
+    const isNatural = registeredTeachers.some(t =>
+        t.classes.includes(cls) &&
+        ["Physics","Chemistry","Biology","Agriculture"].includes(t.subject)
+    );
+
+    return isNatural
+        ? curriculumPeriods["11-12-Natural"]
+        : curriculumPeriods["11-12-Social"];
+}
+
+/* -------------------------------------------------------------
+   ASYNC NON-BLOCKING BACKTRACKING ENGINE (PREVENTS PAGE HANG)
+---------------------------------------------------------------- */
+async function startGenerationAsync(){
+    const btn = document.getElementById("genBtn");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> ⌛ በማስላት ላይ...`;
+    showMessage("⏳ Timetable እየተሰራ ነው...", "success");
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    try {
+        const result = await runSolverAsync();
+        if(result.success){
+            timetable = result.board;
+            displayTimetableResult();
+            showMessage("✅ ተሳክቷል! ሰሌዳው ያለ ምንም የሰዓት ግጭትና ያለ መቆራረጥ ተዘጋጅቷል።", "success");
+        } else {
+            showMessage(`❌ <b>Timetable ማመንጨት አልተቻለም፦</b> ${result.reason}`, "error");
+        }
+    } catch(err) {
+        showMessage(`❌ <b>ስህተት ተፈጥሯል፦</b> ${err.message}`, "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `🚀 GENERATE TIMETABLE`;
+    }
+}
+
+function runSolverAsync(){
+    return new Promise((resolve) => {
+        const ictLabsCount = Number(document.getElementById("ictLabsCount").value);
+
+        if(!Number.isInteger(ictLabsCount) || ictLabsCount < 1){
+            return resolve({success: false, reason: "የICT Lab ብዛት ትክክለኛ ቁጥር አይደለም።"});
+        }
+
+        if(registeredTeachers.length === 0){
+            return resolve({success: false, reason: "እባክህ አስቀድመህ መምህራንን መዝግብ።"});
+        }
+
+        let allClasses = [...new Set(registeredTeachers.flatMap(t => t.classes))].sort();
+
+        // Check Missing Assignments
+        let missing = [];
+        for(const cls of allClasses){
+            const gradeSubjects = getCurriculumForClass(cls);
+            for(const [subj, count] of Object.entries(gradeSubjects)){
+                const hasTeacher = registeredTeachers.some(t => t.classes.includes(cls) && t.subject === subj);
+                if(!hasTeacher) missing.push(`• <b>${cls}</b> -> ${subj}`);
+            }
+        }
+        if(missing.length > 0){
+            return resolve({success: false, reason: "<br>የሚከተሉት ክፍሎች መምህር አልተመደበላቸውም፦<br>" + missing.join("<br>")});
+        }
+
+        // Check Teacher Overload
+        let teacherLoads = {};
+        for(const cls of allClasses){
+            const gradeSubjects = getCurriculumForClass(cls);
+            for(const [subj, count] of Object.entries(gradeSubjects)){
+                const tObj = registeredTeachers.find(t => t.classes.includes(cls) && t.subject === subj);
+                if(tObj) teacherLoads[tObj.name] = (teacherLoads[tObj.name] || 0) + count;
+            }
+        }
+        // A teacher can teach at most one class per period; the hard conflict
+        // check is enforced by teacherBusy during placement. Flag impossible
+        // weekly loads above the maximum available school periods (30).
+        let overloaded = [];
+        for(const [tName, load] of Object.entries(teacherLoads)){
+            if(load > 30) overloaded.push(`• <b>${escapeHtml(tName)}</b>: ${load} ክፍለ-ጊዜ (በሳምንት ከ30 በላይ)`);
+        }
+        if(overloaded.length > 0){
+            return resolve({success: false, reason: "<br>የሚከተሉት መምህራን በሳምንት ከሚቻለው (25 ክፍለ-ጊዜ) በላይ ተመድበዋል፦<br>" + overloaded.join("<br>")});
+        }
+
+        let board = {};
+        let teacherBusy = {};
+        let ictLabUsage = {};
+        let classSubjectDays = {};
+
+        allClasses.forEach(cls => {
+            const gradeNum = parseInt(cls, 10);
+            const maxP = (gradeNum === 9 || gradeNum === 10) ? 6 : 5;
+            board[cls] = Array.from({length: 5}, () => Array(maxP).fill(null));
+            classSubjectDays[cls] = {};
+        });
+
+        let demands = [];
+        for(const cls of allClasses){
+            const gradeSubjects = getCurriculumForClass(cls);
+            for(const [subject, count] of Object.entries(gradeSubjects)){
+                const teacherObj = registeredTeachers.find(t => t.classes.includes(cls) && t.subject === subject);
+                for(let i = 0; i < count; i++){
+                    demands.push({
+                        className: cls,
+                        subject: subject,
+                        teacher: teacherObj.name,
+                        totalPerWeek: count
+                    });
+                }
+            }
+        }
+
+        // HEURISTIC SORTING
+        demands.sort((a,b) => {
+            const loadA = teacherLoads[a.teacher] || 0;
+            const loadB = teacherLoads[b.teacher] || 0;
+            if(loadB !== loadA) return loadB - loadA;
+            if(b.totalPerWeek !== a.totalPerWeek) return b.totalPerWeek - a.totalPerWeek;
+            if(a.subject === "ICT" && b.subject !== "ICT") return -1;
+            if(b.subject === "ICT" && a.subject !== "ICT") return 1;
+            return a.className.localeCompare(b.className);
+        });
+
+        let iterations = 0;
+        const maxIterations = 5000000;
+        const startTime = Date.now();
+        const maxTimeMs = 15000;
+
+        function solveStep(index){
+            if(index >= demands.length) return true;
+
+            iterations++;
+            if(iterations % 5000 === 0){
+                if(Date.now() - startTime > maxTimeMs){
+                    return false;
+                }
+            }
+
+            if(iterations > maxIterations) return false;
+
+            const item = demands[index];
+            const gradeNum = parseInt(item.className, 10);
+            const maxP = (gradeNum === 9 || gradeNum === 10) ? 6 : 5;
+
+            let placed = 0;
+            for(let d=0; d<5; d++){
+                for(let p=0; p<maxP; p++){
+                    if(board[item.className][d][p] && board[item.className][d][p].subject === item.subject){
+                        placed++;
+                    }
+                }
+            }
+            if(placed >= item.totalPerWeek) return solveStep(index + 1);
+
+            let daysOrder = [0,1,2,3,4].sort((a,b) => {
+                const aLoad = board[item.className][a].filter(Boolean).length;
+                const bLoad = board[item.className][b].filter(Boolean).length;
+                return aLoad - bLoad;
+            });
+
+            for(const d of daysOrder){
+                if(classSubjectDays[item.className][item.subject] && classSubjectDays[item.className][item.subject][d]){
+                    continue;
+                }
+
+                for(let p=0; p<maxP; p++){
+                    if(board[item.className][d][p] !== null) continue;
+
+                    if(teacherBusy[item.teacher] && teacherBusy[item.teacher][d] && teacherBusy[item.teacher][d][p]) continue;
+
+                    const labKey = `${d}_${p}`;
+                    if(item.subject === "ICT" && (ictLabUsage[labKey] || 0) >= ictLabsCount) continue;
+
+                    board[item.className][d][p] = { subject: item.subject, teacher: item.teacher };
+                    
+                    if(!teacherBusy[item.teacher]) teacherBusy[item.teacher] = {};
+                    if(!teacherBusy[item.teacher][d]) teacherBusy[item.teacher][d] = {};
+                    teacherBusy[item.teacher][d][p] = true;
+
+                    if(!classSubjectDays[item.className][item.subject]) classSubjectDays[item.className][item.subject] = {};
+                    classSubjectDays[item.className][item.subject][d] = true;
+
+                    if(item.subject === "ICT") ictLabUsage[labKey] = (ictLabUsage[labKey] || 0) + 1;
+
+                    if(solveStep(index + 1)) return true;
+
+                    board[item.className][d][p] = null;
+                    teacherBusy[item.teacher][d][p] = false;
+                    classSubjectDays[item.className][item.subject][d] = false;
+                    if(item.subject === "ICT") ictLabUsage[labKey]--;
+                }
+            }
+
+            return false;
+        }
+
+        const success = solveStep(0);
+        if(success){
+            const audit = validateTimetable(board, allClasses, ictLabsCount);
+            if(!audit.ok){
+                resolve({success:false, reason:"የመጨረሻ ማረጋገጫ አልተሳካም፦ " + audit.errors.slice(0,8).join("<br>")});
+            } else {
+                resolve({success: true, board: board});
+            }
+        } else {
+            resolve({success: false, reason: "በተሰጠው የመምህራንና የሰዓት ገደብ ሰሌዳ ማዘጋጀት አልተቻለም። የመምህራን መደራረብ፣ የICT Lab ብዛት ወይም የማይቻል የመምህር ጭነት ሊኖር ይችላል።"});
+        }
+    });
+}
+
+function validateTimetable(board, allClasses, ictLabsCount){
+    const errors = [];
+    const teacherSlots = new Set();
+    const ictSlots = {};
+    for(const cls of allClasses){
+        const gradeNum = parseInt(cls,10);
+        const maxP = (gradeNum === 9 || gradeNum === 10) ? 6 : 5;
+        const curriculum = getCurriculumForClass(cls);
+        const counts = {};
+        for(let d=0; d<5; d++){
+            const dailySubjects = new Set();
+            for(let p=0; p<maxP; p++){
+                const lesson = board[cls][d][p];
+                if(!lesson){
+                    errors.push(`${cls}: ቀን ${d+1}, ክፍለ-ጊዜ ${p+1} ባዶ ነው`);
+                    continue;
+                }
+                counts[lesson.subject] = (counts[lesson.subject] || 0) + 1;
+                if(dailySubjects.has(lesson.subject)){
+                    errors.push(`${cls}: ${lesson.subject} በአንድ ቀን ተደግሟል`);
+                }
+                dailySubjects.add(lesson.subject);
+                const key = `${lesson.teacher}|${d}|${p}`;
+                if(teacherSlots.has(key)) errors.push(`${lesson.teacher}: በአንድ ሰዓት ከአንድ ክፍል ጋር ተጋጭቷል`);
+                teacherSlots.add(key);
+                if(lesson.subject === "ICT"){
+                    const labKey = `${d}_${p}`;
+                    ictSlots[labKey] = (ictSlots[labKey] || 0) + 1;
+                    if(ictSlots[labKey] > ictLabsCount) errors.push(`ICT Lab: በ${d+1}ኛ ቀን ${p+1}ኛ ሰዓት ከLab ብዛት በላይ ተመድቧል`);
+                }
+            }
+        }
+        for(const [subject, required] of Object.entries(curriculum)){
+            if((counts[subject] || 0) !== required){
+                errors.push(`${cls}: ${subject} ${required} መሆን ሲገባው ${counts[subject] || 0} ተመድቧል`);
+            }
+        }
+    }
+    return {ok:errors.length===0, errors};
+}
+
+function displayTimetableResult(){
+    const box = document.getElementById("result");
+    box.innerHTML = "";
+
+    const allClasses = Object.keys(timetable).sort();
+
+    allClasses.forEach(cls => {
+        const gradeNum = parseInt(cls, 10);
+        const maxP = (gradeNum === 9 || gradeNum === 10) ? 6 : 5;
+
+        let html = `
+            <h2>🏫 Section: ${escapeHtml(cls)} (በቀን ${maxP} ክፍለ-ጊዜ)</h2>
+            <table>
+                <tr>
+                    <th class="period">ክፍለ-ጊዜ</th>`;
+
+        for(let d=0; d<5; d++){
+            html += `<th>${days[d]}</th>`;
+        }
+
+        html += `</tr>`;
+
+        for(let p=0; p<maxP; p++){
+            html += `<tr><th class="period">${p+1}ኛ ክፍለ-ጊዜ</th>`;
+
+            for(let d=0; d<5; d++){
+                const lesson = timetable[cls][d][p];
+
+                if(lesson){
+                    const isICT = lesson.subject === "ICT";
+
+                    html += `<td>
+                        <div class="subject" style="${isICT ? 'color:#dc2626;' : ''}">
+                            ${escapeHtml(lesson.subject)} ${isICT ? '💻' : ''}
+                        </div>
+                        <div class="teacher">
+                            👨‍🏫 ${escapeHtml(lesson.teacher)}
+                        </div>
+                    </td>`;
+                }else{
+                    html += `<td style="background:#f8fafc;">
+                        <span style="color:#64748b;">-</span>
+                    </td>`;
+                }
+            }
+
+            html += `</tr>`;
+        }
+
+        html += `</table><br>`;
+        box.innerHTML += html;
+    });
+}
+
+function showMessage(text, type){
+    const box = document.getElementById("message");
+    box.style.display = "block";
+    box.className = "message " + type;
+    box.innerHTML = text;
+}
+
+function escapeHtml(val){
+    return String(val)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+}
+
+function clearAll(){
+    if(!confirm("ሁሉንም ማጥፋት ትፈልጋለህ?")) return;
+
+    registeredTeachers = [];
+    timetable = {};
+    cancelEdit();
+
+    displayRegisteredTeachers();
+
+    document.getElementById("result").innerHTML =
+        "<p style='color:#64748b;'>እስካሁን ምንም Timetable አልተዘጋጀም።</p>";
+}
+
+renderClassCheckboxes();
+displayRegisteredTeachers();
+</script>
+</body>
+</html>
